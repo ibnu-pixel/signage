@@ -26,7 +26,7 @@
   <div class="container">
     <h2>Data Signage LayarKita</h2>
 
-    <!-- Form Input -->
+    <!-- Form Input Data -->
     <form id="crudForm">
       <input type="hidden" id="rowId">
       <input type="text" id="lokasi" placeholder="Lokasi (cth: Lobby Utama)" required>
@@ -58,7 +58,6 @@
   </div>
 
   <script>
-    // Panggil data saat halaman terbuka
     window.onload = loadData;
 
     function loadData() {
@@ -66,7 +65,7 @@
         .withSuccessHandler(renderTable)
         .withFailureHandler(function(err) {
           console.error("Error:", err);
-          document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat data dari Spreadsheet. Pastikan ID Sheet benar.</td></tr>';
+          document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat data dari Spreadsheet.</td></tr>';
         })
         .getData();
     }
