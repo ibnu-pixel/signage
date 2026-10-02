@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Data Signage LayarKita</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f4f6f9; }
+    .container { max-width: 850px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #333; }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .full-width { grid-column: span 2; }
+    input { padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px 15px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; color: white; }
+    .btn-submit { background-color: #28a745; }
+    .btn-cancel { background-color: #6c757d; display: none; }
+    .btn-edit { background-color: #007bff; padding: 5px 10px; margin-right: 5px; }
+    .btn-delete { background-color: #dc3545; padding: 5px 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; font-size: 14px; }
+    th { background-color: #007bff; color: white; }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Data Signage LayarKita</h2>
+
+    <!-- Form Input -->
+    <form id="crudForm">
+      <input type="hidden" id="rowId">
+      <input type="text" id="lokasi" placeholder="Lokasi (cth: Lobby Utama)" required>
+      <input type="text" id="model" placeholder="Model Signage" required>
+      <input type="text" id="sn" placeholder="Serial Number (SN)" required>
+      <input type="date" id="tglInstall" required>
+      
+      <div class="full-width">
+        <button type="button" id="btnSubmit" class="btn-submit" onclick="saveData()">Tambah Data</button>
+        <button type="button" id="btnCancel" class="btn-cancel" onclick="resetForm()">Batal</button>
+      </div>
+    </form>
+
+    <!-- Tabel Data -->
+    <table>
+      <thead>
+        <tr>
+          <th>Lokasi</th>
+          <th>Model</th>
+          <th>SN</th>
+          <th>Tgl Install</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Panggil data saat halaman terbuka
+    window.onload = loadData;
+
+    function loadData() {
+      google.script.run
+        .withSuccessHandler(renderTable)
+        .withFailureHandler(function(err) {
+          console.error("Error:", err);
+          document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat data dari Spreadsheet. Pastikan ID Sheet benar.</td></tr>';
+        })
+        .getData();
+    }
+
+    function renderTable(data) {
+      let html = '';
+      if (!data || data.length === 0) {
+        html = '<tr><td colspan="5" style="text-align:center;">Belum ada data.</td></tr>';
+      } else {
+        data.forEach(row => {
+          let tgl = row[4];
+          if (tgl && typeof tgl === 'string' && tgl.includes('T')) {
+            tgl = tgl.split('T')[0];
+          } else if (tgl instanceof Date) {
+            tgl = tgl.toISOString().split('T')[0];
+          }
+
+          html += `<tr>
+            <td>${row[1] || ''}</td>
+            <td>${row[2] || ''}</td>
+            <td>${row[3] || ''}</td>
+            <td>${tgl || ''}</td>
+            <td>
+              <button class="btn-edit" onclick="editData('${row[0]}', '${row[1]}', '${row[2]}', '${row[3]}', '${tgl}')">Edit</button>
+              <button class="btn-delete" onclick="deleteData('${row[0]}')">Hapus</button>
+            </td>
+          </tr>`;
+        });
+      }
+      document.getElementById('tableBody').innerHTML = html;
+    }
+
+    function saveData() {
+      const id = document.getElementById('rowId').value;
+      const lokasi = document.getElementById('lokasi').value;
+      const model = document.getElementById('model').value;
+      const sn = document.getElementById('sn').value;
+      const tglInstall = document.getElementById('tglInstall').value;
+
+      if (!lokasi || !model || !sn || !tglInstall) {
+        alert('Mohon isi semua kolom!');
+        return;
+      }
+
+      document.getElementById('btnSubmit').innerText = 'Menyimpan...';
+
+      if (id) {
+        google.script.run.withSuccessHandler(function(res) {
+          alert(res);
+          resetForm();
+          loadData();
+        }).updateData(id, lokasi, model, sn, tglInstall);
+      } else {
+        google.script.run.withSuccessHandler(function(res) {
+          alert(res);
+          resetForm();
+          loadData();
+        }).addData(lokasi, model, sn, tglInstall);
+      }
+    }
+
+    function editData(id, lokasi, model, sn, tglInstall) {
+      document.getElementById('rowId').value = id;
+      document.getElementById('lokasi').value = lokasi;
+      document.getElementById('model').value = model;
+      document.getElementById('sn').value = sn;
+      document.getElementById('tglInstall').value = tglInstall;
+
+      document.getElementById('btnSubmit').innerText = 'Perbarui Data';
+      document.getElementById('btnCancel').style.display = 'inline-block';
+    }
+
+    function deleteData(id) {
+      if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+        google.script.run.withSuccessHandler(function(res) {
+          alert(res);
+          loadData();
+        }).deleteData(id);
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('rowId').value = '';
+      document.getElementById('lokasi').value = '';
+      document.getElementById('model').value = '';
+      document.getElementById('sn').value = '';
+      document.getElementById('tglInstall').value = '';
+
+      document.getElementById('btnSubmit').innerText = 'Tambah Data';
+      document.getElementById('btnCancel').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
