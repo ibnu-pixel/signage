@@ -1,20 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Data Signage LayarKita</title>
   <style>
-    body { font-family: sans-serif; margin: 20px; background-color: #f4f6f9; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f4f6f9; }
     .container { max-width: 850px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     h2 { margin-top: 0; color: #333; }
     form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
     .full-width { grid-column: span 2; }
-    input { padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 10px 15px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; color: white; }
+    input, button { padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+    button { cursor: pointer; border: none; color: white; }
     .btn-submit { background-color: #28a745; }
     .btn-cancel { background-color: #6c757d; display: none; }
-    .btn-edit { background-color: #007bff; padding: 5px 10px; margin-right: 5px; }
-    .btn-delete { background-color: #dc3545; padding: 5px 10px; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; font-size: 14px; }
     th { background-color: #007bff; color: white; }
@@ -56,16 +55,23 @@
   </div>
 
   <script>
+    // MASUKKAN URL WEB APP ANDA DARI LANGKAH 2
+    const WEB_APP_URL = "PASTE_URL_WEB_APP_DI_SINI";
+
     window.onload = loadData;
 
+    // Membaca data menggunakan teknik JSONP (Anti CORS)
     function loadData() {
-      google.script.run
-        .withSuccessHandler(renderTable)
-        .withFailureHandler(function(err) {
-          console.error("Error:", err);
-          document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Gagal memuat data.</td></tr>';
-        })
-        .getData();
+      const script = document.createElement('script');
+      script.src = `${WEB_APP_URL}?callback=renderTable`;
+      document.body.appendChild(script);
+      
+      // Hapus tag script setelah dimuat
+      script.onload = () => script.remove();
+      script.onerror = () => {
+        document.getElementById('tableBody').innerHTML = 
+          '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet. Periksa kembali URL Web App Anda.</td></tr>';
+      };
     }
 
     function renderTable(data) {
@@ -74,21 +80,15 @@
         html = '<tr><td colspan="5" style="text-align:center;">Belum ada data.</td></tr>';
       } else {
         data.forEach(row => {
-          let tgl = row[4];
-          if (tgl && typeof tgl === 'string' && tgl.includes('T')) {
-            tgl = tgl.split('T')[0];
-          } else if (tgl instanceof Date) {
-            tgl = tgl.toISOString().split('T')[0];
-          }
-
+          let tgl = row[4] ? row[4].toString().split('T')[0] : '';
           html += `<tr>
             <td>${row[1] || ''}</td>
             <td>${row[2] || ''}</td>
             <td>${row[3] || ''}</td>
-            <td>${tgl || ''}</td>
+            <td>${tgl}</td>
             <td>
-              <button class="btn-edit" onclick="editData('${row[0]}', '${row[1]}', '${row[2]}', '${row[3]}', '${tgl}')">Edit</button>
-              <button class="btn-delete" onclick="deleteData('${row[0]}')">Hapus</button>
+              <button style="background:#007bff; padding:5px 10px; border-radius:3px;" onclick="editData('${row[0]}', '${row[1]}', '${row[2]}', '${row[3]}', '${tgl}')">Edit</button>
+              <button style="background:#dc3545; padding:5px 10px; border-radius:3px;" onclick="deleteData('${row[0]}')">Hapus</button>
             </td>
           </tr>`;
         });
@@ -98,31 +98,28 @@
 
     function saveData() {
       const id = document.getElementById('rowId').value;
-      const lokasi = document.getElementById('lokasi').value;
-      const model = document.getElementById('model').value;
-      const sn = document.getElementById('sn').value;
-      const tglInstall = document.getElementById('tglInstall').value;
-
-      if (!lokasi || !model || !sn || !tglInstall) {
-        alert('Mohon isi semua kolom!');
-        return;
-      }
+      const payload = {
+        action: id ? "update" : "create",
+        id: id,
+        lokasi: document.getElementById('lokasi').value,
+        model: document.getElementById('model').value,
+        sn: document.getElementById('sn').value,
+        tglInstall: document.getElementById('tglInstall').value
+      };
 
       document.getElementById('btnSubmit').innerText = 'Menyimpan...';
 
-      if (id) {
-        google.script.run.withSuccessHandler(function(res) {
-          alert(res);
-          resetForm();
-          loadData();
-        }).updateData(id, lokasi, model, sn, tglInstall);
-      } else {
-        google.script.run.withSuccessHandler(function(res) {
-          alert(res);
-          resetForm();
-          loadData();
-        }).addData(lokasi, model, sn, tglInstall);
-      }
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        alert(res.message);
+        resetForm();
+        loadData();
+      });
     }
 
     function editData(id, lokasi, model, sn, tglInstall) {
@@ -131,17 +128,22 @@
       document.getElementById('model').value = model;
       document.getElementById('sn').value = sn;
       document.getElementById('tglInstall').value = tglInstall;
-
       document.getElementById('btnSubmit').innerText = 'Perbarui Data';
       document.getElementById('btnCancel').style.display = 'inline-block';
     }
 
     function deleteData(id) {
-      if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-        google.script.run.withSuccessHandler(function(res) {
-          alert(res);
+      if (confirm('Hapus data ini?')) {
+        fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "delete", id: id })
+        })
+        .then(res => res.json())
+        .then(res => {
+          alert(res.message);
           loadData();
-        }).deleteData(id);
+        });
       }
     }
 
@@ -151,7 +153,6 @@
       document.getElementById('model').value = '';
       document.getElementById('sn').value = '';
       document.getElementById('tglInstall').value = '';
-
       document.getElementById('btnSubmit').innerText = 'Tambah Data';
       document.getElementById('btnCancel').style.display = 'none';
     }
