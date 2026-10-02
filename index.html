@@ -55,25 +55,30 @@
   </div>
 
   <script>
-    // MASUKKAN URL WEB APP ANDA DARI LANGKAH 2
+    // MASUKKAN URL WEB APP GOOGLE SCRIPT ANDA DI SINI
     const WEB_APP_URL = "PASTE_URL_WEB_APP_DI_SINI";
 
     window.onload = loadData;
 
-    // Membaca data menggunakan teknik JSONP (Anti CORS)
+    // Fungsi membaca data menggunakan Script Tag (Bypass CORS)
     function loadData() {
+      // Hapus script JSONP lama jika ada
+      const oldScript = document.getElementById('jsonpScript');
+      if (oldScript) oldScript.remove();
+
       const script = document.createElement('script');
-      script.src = `${WEB_APP_URL}?callback=renderTable`;
-      document.body.appendChild(script);
+      script.id = 'jsonpScript';
+      script.src = `${WEB_APP_URL}?callback=renderTable&_=` + new Date().getTime();
       
-      // Hapus tag script setelah dimuat
-      script.onload = () => script.remove();
-      script.onerror = () => {
+      script.onerror = function() {
         document.getElementById('tableBody').innerHTML = 
-          '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet. Periksa kembali URL Web App Anda.</td></tr>';
+          '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet. Periksa URL Web App dan ID Sheet.</td></tr>';
       };
+      
+      document.body.appendChild(script);
     }
 
+    // Callback function yang dipanggil otomatis saat script JSONP selesai dimuat
     function renderTable(data) {
       let html = '';
       if (!data || data.length === 0) {
@@ -114,11 +119,16 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       })
-      .then(res => res.json())
+      .then(res => res.text())
+      .then(text => JSON.parse(text))
       .then(res => {
         alert(res.message);
         resetForm();
         loadData();
+      })
+      .catch(err => {
+        alert("Gagal menyimpan data.");
+        resetForm();
       });
     }
 
@@ -139,7 +149,8 @@
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "delete", id: id })
         })
-        .then(res => res.json())
+        .then(res => res.text())
+        .then(text => JSON.parse(text))
         .then(res => {
           alert(res.message);
           loadData();
