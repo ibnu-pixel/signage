@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Data Signage LayarKita</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f4f6f9; }
+    body { font-family: sans-serif; margin: 20px; background-color: #f4f6f9; }
     .container { max-width: 850px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     h2 { margin-top: 0; color: #333; }
     form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
@@ -15,7 +15,7 @@
     .btn-submit { background-color: #28a745; }
     .btn-cancel { background-color: #6c757d; display: none; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; font-size: 14px; }
+    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
     th { background-color: #007bff; color: white; }
     tr:nth-child(even) { background-color: #f8f9fa; }
   </style>
@@ -55,30 +55,27 @@
   </div>
 
   <script>
-    // MASUKKAN URL WEB APP GOOGLE SCRIPT ANDA DI SINI
+    // MASUKKAN WEB APP URL HASIL DEPLOY LANGKAH 3
     const WEB_APP_URL = "PASTE_URL_WEB_APP_DI_SINI";
 
     window.onload = loadData;
 
-    // Fungsi membaca data menggunakan Script Tag (Bypass CORS)
     function loadData() {
-      // Hapus script JSONP lama jika ada
       const oldScript = document.getElementById('jsonpScript');
       if (oldScript) oldScript.remove();
 
       const script = document.createElement('script');
       script.id = 'jsonpScript';
-      script.src = `${WEB_APP_URL}?callback=renderTable&_=` + new Date().getTime();
+      script.src = `${WEB_APP_URL}?callback=renderTable&ts=` + new Date().getTime();
       
       script.onerror = function() {
         document.getElementById('tableBody').innerHTML = 
-          '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet. Periksa URL Web App dan ID Sheet.</td></tr>';
+          '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet. Cek F12 (Console) di browser.</td></tr>';
       };
       
       document.body.appendChild(script);
     }
 
-    // Callback function yang dipanggil otomatis saat script JSONP selesai dimuat
     function renderTable(data) {
       let html = '';
       if (!data || data.length === 0) {
@@ -92,8 +89,8 @@
             <td>${row[3] || ''}</td>
             <td>${tgl}</td>
             <td>
-              <button style="background:#007bff; padding:5px 10px; border-radius:3px;" onclick="editData('${row[0]}', '${row[1]}', '${row[2]}', '${row[3]}', '${tgl}')">Edit</button>
-              <button style="background:#dc3545; padding:5px 10px; border-radius:3px;" onclick="deleteData('${row[0]}')">Hapus</button>
+              <button style="background:#007bff; padding:5px 10px;" onclick="editData('${row[0]}', '${row[1]}', '${row[2]}', '${row[3]}', '${tgl}')">Edit</button>
+              <button style="background:#dc3545; padding:5px 10px;" onclick="deleteData('${row[0]}')">Hapus</button>
             </td>
           </tr>`;
         });
@@ -125,10 +122,6 @@
         alert(res.message);
         resetForm();
         loadData();
-      })
-      .catch(err => {
-        alert("Gagal menyimpan data.");
-        resetForm();
       });
     }
 
