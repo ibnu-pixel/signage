@@ -26,7 +26,9 @@
     <h2>Data Signage LayarKita</h2>
 
     <form id="crudForm">
-      <input type="hidden" id="rowId">
+      <!-- Menyimpan SN lama untuk acuan update data -->
+      <input type="hidden" id="oldSn"> 
+      
       <input type="text" id="lokasi" placeholder="Lokasi (cth: Lobby Utama)" required>
       <input type="text" id="model" placeholder="Model Signage" required>
       <input type="text" id="sn" placeholder="Serial Number (SN)" required>
@@ -76,20 +78,30 @@
         html = '<tr><td colspan="5" style="text-align:center;">Belum ada data.</td></tr>';
       } else {
         data.forEach(row => {
+          // Pemetaan indeks baru tanpa ID:
+          let lokasi = row[0] || '';
+          let model = row[1] || '';
+          let sn = row[2] || '';
+          
           let tgl = '';
-          if (row[4]) {
-            try { tgl = new Date(row[4]).toISOString().split('T')[0]; } 
-            catch (e) { tgl = row[4]; }
+          if (row[3]) {
+            try { 
+              tgl = new Date(row[3]).toISOString().split('T')[0]; 
+            } catch (e) { 
+              tgl = row[3]; 
+            }
           }
 
           html += `<tr>
-            <td>${row[1] || ''}</td>
-            <td>${row[2] || ''}</td>
-            <td>${row[3] || ''}</td>
+            <td>${lokasi}</td>
+            <td>${model}</td>
+            <td>${sn}</td>
             <td>${tgl}</td>
             <td>
-              <button style="background:#007bff; padding:5px 10px;" onclick="editData('${row[0]}', '${row[1] || ''}', '${row[2] || ''}', '${row[3] || ''}', '${tgl}')">Edit</button>
-              <button style="background:#dc3545; padding:5px 10px;" onclick="deleteData('${row[0]}')">Hapus</button>
+              <button style="background:#007bff; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" 
+                      onclick="editData('${lokasi}', '${model}', '${sn}', '${tgl}')">Edit</button>
+              <button style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" 
+                      onclick="deleteData('${sn}')">Hapus</button>
             </td>
           </tr>`;
         });
@@ -98,10 +110,10 @@
     }
 
     function saveData() {
-      const id = document.getElementById('rowId').value;
+      const oldSn = document.getElementById('oldSn').value;
       const payload = {
-        action: id ? "update" : "create",
-        id: id,
+        action: oldSn ? "update" : "create",
+        oldSn: oldSn,
         lokasi: document.getElementById('lokasi').value,
         model: document.getElementById('model').value,
         sn: document.getElementById('sn').value,
@@ -123,8 +135,8 @@
       });
     }
 
-    function editData(id, lokasi, model, sn, tglInstall) {
-      document.getElementById('rowId').value = id;
+    function editData(lokasi, model, sn, tglInstall) {
+      document.getElementById('oldSn').value = sn;
       document.getElementById('lokasi').value = lokasi;
       document.getElementById('model').value = model;
       document.getElementById('sn').value = sn;
@@ -133,12 +145,12 @@
       document.getElementById('btnCancel').style.display = 'inline-block';
     }
 
-    function deleteData(id) {
-      if (confirm('Hapus data ini?')) {
+    function deleteData(sn) {
+      if (confirm('Hapus data dengan SN ' + sn + '?')) {
         fetch(WEB_APP_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "delete", id: id })
+          body: JSON.stringify({ action: "delete", sn: sn })
         })
         .then(res => res.json())
         .then(res => {
@@ -149,7 +161,7 @@
     }
 
     function resetForm() {
-      document.getElementById('rowId').value = '';
+      document.getElementById('oldSn').value = '';
       document.getElementById('lokasi').value = '';
       document.getElementById('model').value = '';
       document.getElementById('sn').value = '';
