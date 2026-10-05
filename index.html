@@ -55,25 +55,16 @@
   </div>
 
   <script>
-    // MASUKKAN WEB APP URL HASIL DEPLOY LANGKAH 3
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyH5ivDioNeyC_rbky2X5ta0pj-8qdH5-8gth4ectYaFCPlgJgg052eBU_bv6QA_-dggA/exec";
-
     window.onload = loadData;
 
     function loadData() {
-      const oldScript = document.getElementById('jsonpScript');
-      if (oldScript) oldScript.remove();
-
-      const script = document.createElement('script');
-      script.id = 'jsonpScript';
-      script.src = `${WEB_APP_URL}?callback=renderTable&ts=` + new Date().getTime();
-      
-      script.onerror = function() {
-        document.getElementById('tableBody').innerHTML = 
-          '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet. Cek F12 (Console) di browser.</td></tr>';
-      };
-      
-      document.body.appendChild(script);
+      google.script.run
+        .withSuccessHandler(renderTable)
+        .withFailureHandler(function(err) {
+          document.getElementById('tableBody').innerHTML = 
+            '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data: ' + err.message + '</td></tr>';
+        })
+        .getDataFromSheet();
     }
 
     function renderTable(data) {
@@ -82,14 +73,14 @@
         html = '<tr><td colspan="5" style="text-align:center;">Belum ada data.</td></tr>';
       } else {
         data.forEach(row => {
-          let tgl = row[4] ? row[4].toString().split('T')[0] : '';
+          let tgl = row[4] ? new Date(row[4]).toISOString().split('T')[0] : '';
           html += `<tr>
             <td>${row[1] || ''}</td>
             <td>${row[2] || ''}</td>
             <td>${row[3] || ''}</td>
             <td>${tgl}</td>
             <td>
-              <button style="background:#007bff; padding:5px 10px;" onclick="editData('${row[0]}', '${row[1]}', '${row[2]}', '${row[3]}', '${tgl}')">Edit</button>
+              <button style="background:#007bff; padding:5px 10px;" onclick="editData('${row[0]}', '${row[1] || ''}', '${row[2] || ''}', '${row[3] || ''}', '${tgl}')">Edit</button>
               <button style="background:#dc3545; padding:5px 10px;" onclick="deleteData('${row[0]}')">Hapus</button>
             </td>
           </tr>`;
@@ -101,7 +92,6 @@
     function saveData() {
       const id = document.getElementById('rowId').value;
       const payload = {
-        action: id ? "update" : "create",
         id: id,
         lokasi: document.getElementById('lokasi').value,
         model: document.getElementById('model').value,
@@ -111,18 +101,17 @@
 
       document.getElementById('btnSubmit').innerText = 'Menyimpan...';
 
-      fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.text())
-      .then(text => JSON.parse(text))
-      .then(res => {
-        alert(res.message);
-        resetForm();
-        loadData();
-      });
+      if (id) {
+        google.script.run.withSuccessHandler(onSaveSuccess).updateData(payload);
+      } else {
+        google.script.run.withSuccessHandler(onSaveSuccess).createData(payload);
+      }
+    }
+
+    function onSaveSuccess(msg) {
+      alert(msg);
+      resetForm();
+      loadData();
     }
 
     function editData(id, lokasi, model, sn, tglInstall) {
@@ -137,17 +126,12 @@
 
     function deleteData(id) {
       if (confirm('Hapus data ini?')) {
-        fetch(WEB_APP_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "delete", id: id })
-        })
-        .then(res => res.text())
-        .then(text => JSON.parse(text))
-        .then(res => {
-          alert(res.message);
-          loadData();
-        });
+        google.script.run
+          .withSuccessHandler(function(msg) {
+            alert(msg);
+            loadData();
+          })
+          .deleteData(id);
       }
     }
 
