@@ -55,16 +55,19 @@
   </div>
 
   <script>
+    // MASUKKAN URL WEB APP ANDA DI SINI
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyH5ivDioNeyC_rbky2X5ta0pj-8qdH5-8gth4ectYaFCPlgJgg052eBU_bv6QA_-dggA/exec";
+
     window.onload = loadData;
 
     function loadData() {
-      google.script.run
-        .withSuccessHandler(renderTable)
-        .withFailureHandler(function(err) {
+      fetch(WEB_APP_URL)
+        .then(res => res.json())
+        .then(data => renderTable(data))
+        .catch(err => {
           document.getElementById('tableBody').innerHTML = 
-            '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data: ' + err.message + '</td></tr>';
-        })
-        .getDataFromSheet();
+            '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet.</td></tr>';
+        });
     }
 
     function renderTable(data) {
@@ -73,7 +76,12 @@
         html = '<tr><td colspan="5" style="text-align:center;">Belum ada data.</td></tr>';
       } else {
         data.forEach(row => {
-          let tgl = row[4] ? new Date(row[4]).toISOString().split('T')[0] : '';
+          let tgl = '';
+          if (row[4]) {
+            try { tgl = new Date(row[4]).toISOString().split('T')[0]; } 
+            catch (e) { tgl = row[4]; }
+          }
+
           html += `<tr>
             <td>${row[1] || ''}</td>
             <td>${row[2] || ''}</td>
@@ -92,6 +100,7 @@
     function saveData() {
       const id = document.getElementById('rowId').value;
       const payload = {
+        action: id ? "update" : "create",
         id: id,
         lokasi: document.getElementById('lokasi').value,
         model: document.getElementById('model').value,
@@ -101,17 +110,17 @@
 
       document.getElementById('btnSubmit').innerText = 'Menyimpan...';
 
-      if (id) {
-        google.script.run.withSuccessHandler(onSaveSuccess).updateData(payload);
-      } else {
-        google.script.run.withSuccessHandler(onSaveSuccess).createData(payload);
-      }
-    }
-
-    function onSaveSuccess(msg) {
-      alert(msg);
-      resetForm();
-      loadData();
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        alert(res.message);
+        resetForm();
+        loadData();
+      });
     }
 
     function editData(id, lokasi, model, sn, tglInstall) {
@@ -126,12 +135,16 @@
 
     function deleteData(id) {
       if (confirm('Hapus data ini?')) {
-        google.script.run
-          .withSuccessHandler(function(msg) {
-            alert(msg);
-            loadData();
-          })
-          .deleteData(id);
+        fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "delete", id: id })
+        })
+        .then(res => res.json())
+        .then(res => {
+          alert(res.message);
+          loadData();
+        });
       }
     }
 
