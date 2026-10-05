@@ -3,73 +3,252 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data Signage LayarKita</title>
+  <title>Data Signage - LayarKita</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <style>
-    body { font-family: sans-serif; margin: 20px; background-color: #f4f6f9; }
-    .container { max-width: 850px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; color: #333; }
-    form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-    .full-width { grid-column: span 2; }
-    input, button { padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
-    button { cursor: pointer; border: none; color: white; }
-    .btn-submit { background-color: #28a745; }
-    .btn-cancel { background-color: #6c757d; display: none; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #dee2e6; padding: 10px; text-align: left; }
-    th { background-color: #007bff; color: white; }
-    tr:nth-child(even) { background-color: #f8f9fa; }
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); padding: 16px; }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* Modal PIN */
+    .login-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 16px;
+    }
+
+    .login-card {
+      background: white; padding: 32px; border-radius: var(--radius);
+      width: 100%; max-width: 360px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center;
+    }
+
+    .login-logo { height: 50px; margin-bottom: 12px; }
+    .pin-input {
+      letter-spacing: 0.5em; text-align: center; font-size: 1.25rem; font-weight: 700;
+    }
+
+    /* Layout Components */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card-bg); padding: 16px 20px; border-radius: var(--radius);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px;
+    }
+
+    .logo { height: 40px; }
+    .card { background: var(--card-bg); padding: 20px; border-radius: var(--radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 0.813rem; font-weight: 600; color: var(--text-muted); }
+    .form-group input { padding: 10px; font-size: 0.875rem; border: 1px solid var(--border-color); border-radius: 8px; outline: none; }
+    .form-actions { grid-column: span 2; display: flex; gap: 8px; margin-top: 8px; }
+
+    .btn { padding: 10px 16px; font-size: 0.875rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
+
+    .badge { padding: 4px 10px; font-size: 0.75rem; font-weight: 700; border-radius: 20px; text-transform: uppercase; }
+    .badge-admin { background: #dbeafe; color: #1e40af; }
+    .badge-user { background: #f1f5f9; color: #475569; }
+
+    /* Table */
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: #f8fafc; padding: 12px; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
+    td { padding: 12px; font-size: 0.875rem; border-bottom: 1px solid var(--border-color); }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-actions { grid-column: span 1; }
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tr { border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px; padding: 12px; background: #fff; }
+      td { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-color); }
+      td:last-child { border-bottom: none; justify-content: flex-end; }
+      td::before { content: attr(data-label); font-weight: 600; font-size: 0.75rem; color: var(--text-muted); }
+    }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Data Signage LayarKita</h2>
+  <!-- Modal PIN Login -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <img src="https://lh3.googleusercontent.com/d/1g9T-EcYTnGQd1yXK-oOToE72l1jZ4EKb" class="login-logo">
+      <h3 style="margin-bottom: 4px;">Akses Signage</h3>
+      <p style="font-size: 0.813rem; color: var(--text-muted); margin-bottom: 16px;">Masukkan PIN Akses Anda</p>
+      
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <input type="password" id="pinInput" class="pin-input" maxlength="6" placeholder="******" required autofocus>
+        </div>
+        <p id="loginError" style="color: var(--danger); font-size: 0.75rem; margin-bottom: 8px; display: none;"></p>
+        <button type="submit" id="btnLogin" class="btn btn-primary" style="width: 100%;">
+          <i class="fa-solid fa-key"></i> Masuk
+        </button>
+      </form>
+    </div>
+  </div>
 
-    <form id="crudForm">
-      <!-- Menyimpan SN lama untuk acuan update data -->
-      <input type="hidden" id="oldSn"> 
-      
-      <input type="text" id="lokasi" placeholder="Lokasi (cth: Lobby Utama)" required>
-      <input type="text" id="model" placeholder="Model Signage" required>
-      <input type="text" id="sn" placeholder="Serial Number (SN)" required>
-      <input type="date" id="tglInstall" required>
-      
-      <div class="full-width">
-        <button type="button" id="btnSubmit" class="btn-submit" onclick="saveData()">Tambah Data</button>
-        <button type="button" id="btnCancel" class="btn-cancel" onclick="resetForm()">Batal</button>
+  <!-- Main Content -->
+  <div class="container" id="appContent" style="display: none;">
+    <div class="header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <img src="https://lh3.googleusercontent.com/d/1g9T-EcYTnGQd1yXK-oOToE72l1jZ4EKb" class="logo">
+        <div>
+          <h2 style="font-size: 1.1rem;">Data Signage</h2>
+          <p id="userNameText" style="font-size: 0.75rem; color: var(--text-muted);"></p>
+        </div>
       </div>
-    </form>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span id="roleBadge" class="badge"></span>
+        <button onclick="handleLogout()" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">
+          <i class="fa-solid fa-power-off"></i>
+        </button>
+      </div>
+    </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Lokasi</th>
-          <th>Model</th>
-          <th>SN</th>
-          <th>Tgl Install</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
-      </tbody>
-    </table>
+    <!-- Form CRUD (Admin Only) -->
+    <div class="card" id="formCard">
+      <div class="card-title"><i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> Form Signage</div>
+      <form id="crudForm" class="form-grid">
+        <input type="hidden" id="oldSn">
+        <div class="form-group">
+          <label>Lokasi</label>
+          <input type="text" id="lokasi" required>
+        </div>
+        <div class="form-group">
+          <label>Model</label>
+          <input type="text" id="model" required>
+        </div>
+        <div class="form-group">
+          <label>Serial Number (SN)</label>
+          <input type="text" id="sn" required>
+        </div>
+        <div class="form-group">
+          <label>Tanggal Install</label>
+          <input type="date" id="tglInstall" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="btnSubmit" class="btn btn-primary" onclick="saveData()">Tambah Data</button>
+          <button type="button" id="btnCancel" class="btn" style="display:none;" onclick="resetForm()">Batal</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-list" style="color: var(--primary);"></i> Daftar Signage</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Lokasi</th>
+              <th>Model</th>
+              <th>Serial Number</th>
+              <th>Tgl Install</th>
+              <th id="thAksi" style="text-align: right;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script>
-    // MASUKKAN URL WEB APP ANDA DI SINI
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyH5ivDioNeyC_rbky2X5ta0pj-8qdH5-8gth4ectYaFCPlgJgg052eBU_bv6QA_-dggA/exec";
+    let currentUser = null;
 
-    window.onload = loadData;
+    window.onload = function() {
+      const savedUser = localStorage.getItem('userData');
+      if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showApp();
+      }
+    };
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const pin = document.getElementById('pinInput').value;
+      const btn = document.getElementById('btnLogin');
+      const err = document.getElementById('loginError');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memeriksa...';
+      err.style.display = 'none';
+
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "login", pin: pin })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          currentUser = { role: res.role, nama: res.nama };
+          localStorage.setItem('userData', JSON.stringify(currentUser));
+          showApp();
+        } else {
+          err.innerText = res.message;
+          err.style.display = 'block';
+        }
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-key"></i> Masuk';
+      });
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('userData');
+      currentUser = null;
+      document.getElementById('appContent').style.display = 'none';
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('pinInput').value = '';
+    }
+
+    function showApp() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('appContent').style.display = 'block';
+      
+      document.getElementById('userNameText').innerText = currentUser.nama;
+      const badge = document.getElementById('roleBadge');
+      badge.innerText = currentUser.role;
+      badge.className = 'badge ' + (currentUser.role === 'admin' ? 'badge-admin' : 'badge-user');
+
+      if (currentUser.role !== 'admin') {
+        document.getElementById('formCard').style.display = 'none';
+        document.getElementById('thAksi').style.display = 'none';
+      } else {
+        document.getElementById('formCard').style.display = 'block';
+        document.getElementById('thAksi').style.display = 'table-cell';
+      }
+
+      loadData();
+    }
 
     function loadData() {
       fetch(WEB_APP_URL)
         .then(res => res.json())
-        .then(data => renderTable(data))
-        .catch(err => {
-          document.getElementById('tableBody').innerHTML = 
-            '<tr><td colspan="5" style="text-align:center; color:red;">Gagal mengambil data dari Google Sheet.</td></tr>';
-        });
+        .then(data => renderTable(data));
     }
 
     function renderTable(data) {
@@ -78,31 +257,19 @@
         html = '<tr><td colspan="5" style="text-align:center;">Belum ada data.</td></tr>';
       } else {
         data.forEach(row => {
-          // Pemetaan indeks baru tanpa ID:
-          let lokasi = row[0] || '';
-          let model = row[1] || '';
-          let sn = row[2] || '';
-          
-          let tgl = '';
-          if (row[3]) {
-            try { 
-              tgl = new Date(row[3]).toISOString().split('T')[0]; 
-            } catch (e) { 
-              tgl = row[3]; 
-            }
-          }
+          let tgl = row[3] ? new Date(row[3]).toISOString().split('T')[0] : '-';
+          let aksi = currentUser.role === 'admin' ? `
+            <td data-label="Aksi" style="text-align: right;">
+              <button onclick="editData('${row[0]}','${row[1]}','${row[2]}','${tgl}')" class="btn btn-outline" style="padding:4px 8px;"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteData('${row[2]}')" class="btn btn-outline" style="padding:4px 8px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+            </td>` : '';
 
           html += `<tr>
-            <td>${lokasi}</td>
-            <td>${model}</td>
-            <td>${sn}</td>
-            <td>${tgl}</td>
-            <td>
-              <button style="background:#007bff; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" 
-                      onclick="editData('${lokasi}', '${model}', '${sn}', '${tgl}')">Edit</button>
-              <button style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;" 
-                      onclick="deleteData('${sn}')">Hapus</button>
-            </td>
+            <td data-label="Lokasi">${row[0] || '-'}</td>
+            <td data-label="Model">${row[1] || '-'}</td>
+            <td data-label="SN"><strong>${row[2] || '-'}</strong></td>
+            <td data-label="Tgl Install">${tgl}</td>
+            ${aksi}
           </tr>`;
         });
       }
@@ -110,17 +277,14 @@
     }
 
     function saveData() {
-      const oldSn = document.getElementById('oldSn').value;
       const payload = {
-        action: oldSn ? "update" : "create",
-        oldSn: oldSn,
+        action: document.getElementById('oldSn').value ? "update" : "create",
+        oldSn: document.getElementById('oldSn').value,
         lokasi: document.getElementById('lokasi').value,
         model: document.getElementById('model').value,
         sn: document.getElementById('sn').value,
         tglInstall: document.getElementById('tglInstall').value
       };
-
-      document.getElementById('btnSubmit').innerText = 'Menyimpan...';
 
       fetch(WEB_APP_URL, {
         method: "POST",
@@ -135,37 +299,31 @@
       });
     }
 
-    function editData(lokasi, model, sn, tglInstall) {
+    function editData(lokasi, model, sn, tgl) {
       document.getElementById('oldSn').value = sn;
       document.getElementById('lokasi').value = lokasi;
       document.getElementById('model').value = model;
       document.getElementById('sn').value = sn;
-      document.getElementById('tglInstall').value = tglInstall;
+      document.getElementById('tglInstall').value = tgl;
       document.getElementById('btnSubmit').innerText = 'Perbarui Data';
-      document.getElementById('btnCancel').style.display = 'inline-block';
+      document.getElementById('btnCancel').style.display = 'inline-flex';
     }
 
     function deleteData(sn) {
-      if (confirm('Hapus data dengan SN ' + sn + '?')) {
+      if (confirm('Hapus perangkat SN ' + sn + '?')) {
         fetch(WEB_APP_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "delete", sn: sn })
         })
         .then(res => res.json())
-        .then(res => {
-          alert(res.message);
-          loadData();
-        });
+        .then(res => { alert(res.message); loadData(); });
       }
     }
 
     function resetForm() {
       document.getElementById('oldSn').value = '';
-      document.getElementById('lokasi').value = '';
-      document.getElementById('model').value = '';
-      document.getElementById('sn').value = '';
-      document.getElementById('tglInstall').value = '';
+      document.getElementById('crudForm').reset();
       document.getElementById('btnSubmit').innerText = 'Tambah Data';
       document.getElementById('btnCancel').style.display = 'none';
     }
