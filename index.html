@@ -112,7 +112,6 @@
       </div>
 
       <form id="crudForm" class="form-grid">
-        <!-- Input Tersembunyi untuk menyimpan SN Lama saat Edit -->
         <input type="hidden" id="oldSn">
 
         <div class="form-group">
@@ -295,15 +294,16 @@
       if (!data || data.length === 0) {
         html = '<tr><td colspan="5" style="text-align:center;">Tidak ada data ditemukan.</td></tr>';
       } else {
-        data.forEach((row, idx) => {
+        data.forEach(row => {
           let lokasi = row[0] || '';
           let model = row[1] || '';
           let sn = row[2] || '';
           let tgl = row[3] || '';
 
+          // Mengirimkan teks data secara langsung tanpa mengandalkan indeks array
           let aksi = currentUser.role === 'admin' ? `
             <td data-label="Aksi" style="text-align: right;">
-              <button onclick="triggerEdit(${idx})" class="btn btn-outline" style="padding:4px 8px;" title="Edit"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="triggerEdit('${escapeQuotes(lokasi)}', '${escapeQuotes(model)}', '${escapeQuotes(sn)}', '${escapeQuotes(tgl)}')" class="btn btn-outline" style="padding:4px 8px;" title="Edit"><i class="fa-solid fa-pen"></i></button>
               <button onclick="deleteData('${escapeQuotes(sn)}')" class="btn btn-outline" style="padding:4px 8px; color:var(--danger);" title="Hapus"><i class="fa-solid fa-trash"></i></button>
             </td>` : '';
 
@@ -319,24 +319,21 @@
       document.getElementById('tableBody').innerHTML = html;
     }
 
-    // MEMBUKA MODAL KHUSUS EDIT DATA
-    function triggerEdit(idx) {
-      const row = rawDataStore[idx];
-      if (row) {
-        document.getElementById('modalTitle').innerText = 'Edit Data Signage';
-        document.getElementById('oldSn').value = row[2]; // PENTING: simpan SN asli untuk acuan pencarian di Sheet
-        document.getElementById('lokasi').value = row[0] || '';
-        document.getElementById('model').value = row[1] || '';
-        document.getElementById('sn').value = row[2] || '';
-        document.getElementById('tglInstall').value = row[3] || '';
-        document.getElementById('formModal').style.display = 'flex';
-      }
+    // FUNGSI EDIT DATA
+    function triggerEdit(lokasi, model, sn, tgl) {
+      document.getElementById('modalTitle').innerText = 'Edit Data Signage';
+      document.getElementById('oldSn').value = sn; // KUNCI UTAMA: oldSn terisi tepat dari nilai Serial Number murni
+      document.getElementById('lokasi').value = lokasi;
+      document.getElementById('model').value = model;
+      document.getElementById('sn').value = sn;
+      document.getElementById('tglInstall').value = tgl;
+      document.getElementById('formModal').style.display = 'flex';
     }
 
-    // MEMBUKA MODAL KHUSUS TAMBAH DATA BARU
+    // FUNGSI TAMBAH DATA BARU
     function openCreateModal() {
       document.getElementById('modalTitle').innerText = 'Tambah Data Signage';
-      document.getElementById('oldSn').value = ''; // PENTING: Kosongkan agar terdeteksi sebagai "create"
+      document.getElementById('oldSn').value = ''; // KUNCI UTAMA: dikosongkan agar menjadi TAMBAH DATA
       document.getElementById('crudForm').reset();
       document.getElementById('formModal').style.display = 'flex';
     }
@@ -346,7 +343,7 @@
     }
 
     function escapeQuotes(str) {
-      return (str || '').toString().replace(/'/g, "\\'");
+      return (str || '').toString().replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 
     function filterTable() {
@@ -359,7 +356,6 @@
       renderTable(filtered);
     }
 
-    // MENYIMPAN DATA (Otomatis memilah "update" atau "create")
     function saveData() {
       const lokasi = document.getElementById('lokasi').value;
       const model = document.getElementById('model').value;
@@ -376,7 +372,6 @@
       btn.disabled = true;
       btn.innerText = 'Menyimpan...';
 
-      // Jika oldSn ada isinya -> UPDATE, jika kosong -> CREATE
       const payload = {
         action: oldSn ? "update" : "create",
         oldSn: oldSn,
