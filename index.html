@@ -112,7 +112,9 @@
       </div>
 
       <form id="crudForm" class="form-grid">
+        <!-- Input Tersembunyi untuk menyimpan SN Lama saat Edit -->
         <input type="hidden" id="oldSn">
+
         <div class="form-group">
           <label>Lokasi Signage</label>
           <input type="text" id="lokasi" placeholder="cth: Lobby Utama" required>
@@ -176,7 +178,7 @@
           <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari lokasi, model, atau SN...">
         </div>
         <div style="display: flex; gap: 8px;">
-          <button id="btnAddData" onclick="openFormModal('create')" class="btn btn-primary" style="display: none;">
+          <button id="btnAddData" onclick="openCreateModal()" class="btn btn-primary" style="display: none;">
             <i class="fa-solid fa-plus"></i> Tambah
           </button>
           <button onclick="exportToCSV()" class="btn btn-success">
@@ -301,8 +303,8 @@
 
           let aksi = currentUser.role === 'admin' ? `
             <td data-label="Aksi" style="text-align: right;">
-              <button onclick="triggerEdit(${idx})" class="btn btn-outline" style="padding:4px 8px;"><i class="fa-solid fa-pen"></i></button>
-              <button onclick="deleteData('${escapeQuotes(sn)}')" class="btn btn-outline" style="padding:4px 8px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+              <button onclick="triggerEdit(${idx})" class="btn btn-outline" style="padding:4px 8px;" title="Edit"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteData('${escapeQuotes(sn)}')" class="btn btn-outline" style="padding:4px 8px; color:var(--danger);" title="Hapus"><i class="fa-solid fa-trash"></i></button>
             </td>` : '';
 
           html += `<tr>
@@ -317,11 +319,30 @@
       document.getElementById('tableBody').innerHTML = html;
     }
 
+    // MEMBUKA MODAL KHUSUS EDIT DATA
     function triggerEdit(idx) {
       const row = rawDataStore[idx];
       if (row) {
-        openFormModal('update', row[0], row[1], row[2], row[3]);
+        document.getElementById('modalTitle').innerText = 'Edit Data Signage';
+        document.getElementById('oldSn').value = row[2]; // PENTING: simpan SN asli untuk acuan pencarian di Sheet
+        document.getElementById('lokasi').value = row[0] || '';
+        document.getElementById('model').value = row[1] || '';
+        document.getElementById('sn').value = row[2] || '';
+        document.getElementById('tglInstall').value = row[3] || '';
+        document.getElementById('formModal').style.display = 'flex';
       }
+    }
+
+    // MEMBUKA MODAL KHUSUS TAMBAH DATA BARU
+    function openCreateModal() {
+      document.getElementById('modalTitle').innerText = 'Tambah Data Signage';
+      document.getElementById('oldSn').value = ''; // PENTING: Kosongkan agar terdeteksi sebagai "create"
+      document.getElementById('crudForm').reset();
+      document.getElementById('formModal').style.display = 'flex';
+    }
+
+    function closeFormModal() {
+      document.getElementById('formModal').style.display = 'none';
     }
 
     function escapeQuotes(str) {
@@ -338,25 +359,13 @@
       renderTable(filtered);
     }
 
-    function openFormModal(type, lokasi='', model='', sn='', tgl='') {
-      document.getElementById('formModal').style.display = 'flex';
-      document.getElementById('modalTitle').innerText = type === 'create' ? 'Tambah Data Signage' : 'Edit Data Signage';
-      document.getElementById('oldSn').value = type === 'create' ? '' : sn;
-      document.getElementById('lokasi').value = lokasi;
-      document.getElementById('model').value = model;
-      document.getElementById('sn').value = sn;
-      document.getElementById('tglInstall').value = tgl;
-    }
-
-    function closeFormModal() {
-      document.getElementById('formModal').style.display = 'none';
-    }
-
+    // MENYIMPAN DATA (Otomatis memilah "update" atau "create")
     function saveData() {
       const lokasi = document.getElementById('lokasi').value;
       const model = document.getElementById('model').value;
       const sn = document.getElementById('sn').value;
       const tglInstall = document.getElementById('tglInstall').value;
+      const oldSn = document.getElementById('oldSn').value;
 
       if (!lokasi || !model || !sn || !tglInstall) {
         alert("Semua kolom wajib diisi!");
@@ -367,9 +376,10 @@
       btn.disabled = true;
       btn.innerText = 'Menyimpan...';
 
+      // Jika oldSn ada isinya -> UPDATE, jika kosong -> CREATE
       const payload = {
-        action: document.getElementById('oldSn').value ? "update" : "create",
-        oldSn: document.getElementById('oldSn').value,
+        action: oldSn ? "update" : "create",
+        oldSn: oldSn,
         lokasi: lokasi,
         model: model,
         sn: sn,
