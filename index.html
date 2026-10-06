@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data Signage - LayarKita</title>
+  <title>Data Signage - LayarKita Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -237,7 +237,7 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          currentUser = { role: res.role, nama: res.nama, pin: res.pin };
+          currentUser = { role: res.role, nama: res.nama };
           localStorage.setItem('userData', JSON.stringify(currentUser));
           showApp();
         } else {
@@ -368,7 +368,6 @@
       btn.innerText = 'Menyimpan...';
 
       const payload = {
-        pin: currentUser.pin,
         action: document.getElementById('oldSn').value ? "update" : "create",
         oldSn: document.getElementById('oldSn').value,
         lokasi: lokasi,
@@ -401,7 +400,7 @@
         fetch(WEB_APP_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ pin: currentUser.pin, action: "delete", sn: sn })
+          body: JSON.stringify({ action: "delete", sn: sn })
         })
         .then(res => res.json())
         .then(res => { alert(res.message); loadData(); });
