@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data Signage - LayarKita</title>
+  <title>Data Signage - LayarKita Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+  <!-- Library QR/Barcode Scanner -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
   <style>
     :root {
       --primary: #2563eb;
@@ -17,29 +20,27 @@
       --text-muted: #64748b;
       --border-color: #e2e8f0;
       --danger: #ef4444;
+      --success: #10b981;
       --radius: 12px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); padding: 16px; }
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 960px; margin: 0 auto; }
 
-    /* Modal PIN */
-    .login-overlay {
+    /* Modals Overlay */
+    .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
       display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 16px;
     }
 
-    .login-card {
-      background: white; padding: 32px; border-radius: var(--radius);
-      width: 100%; max-width: 360px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center;
+    .modal-card {
+      background: white; padding: 24px; border-radius: var(--radius);
+      width: 100%; max-width: 480px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
     }
 
-    .login-logo { height: 50px; margin-bottom: 12px; }
-    .pin-input {
-      letter-spacing: 0.5em; text-align: center; font-size: 1.25rem; font-weight: 700;
-    }
+    .pin-input { letter-spacing: 0.5em; text-align: center; font-size: 1.25rem; font-weight: 700; }
 
     /* Layout Components */
     .header {
@@ -50,16 +51,28 @@
 
     .logo { height: 40px; }
     .card { background: var(--card-bg); padding: 20px; border-radius: var(--radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
     
-    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    /* Toolbar (Search & Export) */
+    .toolbar {
+      display: flex; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+
+    .search-box {
+      display: flex; align-items: center; gap: 8px; background: #f1f5f9;
+      padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-color); flex: 1; min-width: 220px;
+    }
+
+    .search-box input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.875rem; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-group label { font-size: 0.813rem; font-weight: 600; color: var(--text-muted); }
     .form-group input { padding: 10px; font-size: 0.875rem; border: 1px solid var(--border-color); border-radius: 8px; outline: none; }
-    .form-actions { grid-column: span 2; display: flex; gap: 8px; margin-top: 8px; }
+    .input-with-btn { display: flex; gap: 6px; }
 
-    .btn { padding: 10px 16px; font-size: 0.875rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn { padding: 8px 14px; font-size: 0.875rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
     .btn-primary { background: var(--primary); color: white; }
+    .btn-success { background: var(--success); color: white; }
     .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
 
     .badge { padding: 4px 10px; font-size: 0.75rem; font-weight: 700; border-radius: 20px; text-transform: uppercase; }
@@ -73,8 +86,7 @@
     td { padding: 12px; font-size: 0.875rem; border-bottom: 1px solid var(--border-color); }
 
     @media (max-width: 640px) {
-      .form-grid { grid-template-columns: 1fr; }
-      .form-actions { grid-column: span 1; }
+      .toolbar { flex-direction: column; }
       table, thead, tbody, th, td, tr { display: block; }
       thead { display: none; }
       tr { border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 12px; padding: 12px; background: #fff; }
@@ -86,10 +98,10 @@
 </head>
 <body>
 
-  <!-- Modal PIN Login -->
-  <div id="loginOverlay" class="login-overlay">
-    <div class="login-card">
-      <img src="https://lh3.googleusercontent.com/d/1g9T-EcYTnGQd1yXK-oOToE72l1jZ4EKb" class="login-logo">
+  <!-- 1. MODAL LOGIN -->
+  <div id="loginOverlay" class="modal-overlay">
+    <div class="modal-card" style="max-width: 360px; text-align: center;">
+      <img src="https://lh3.googleusercontent.com/d/1g9T-EcYTnGQd1yXK-oOToE72l1jZ4EKb" class="logo" style="height:50px; margin-bottom: 12px;">
       <h3 style="margin-bottom: 4px;">Akses Signage</h3>
       <p style="font-size: 0.813rem; color: var(--text-muted); margin-bottom: 16px;">Masukkan PIN Akses Anda</p>
       
@@ -105,7 +117,56 @@
     </div>
   </div>
 
-  <!-- Main Content -->
+  <!-- 2. MODAL FORM DATA (Pop-up Form) -->
+  <div id="formModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 id="modalTitle">Tambah Data Signage</h3>
+        <button onclick="closeFormModal()" class="btn btn-outline" style="padding: 4px 8px;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="crudForm" class="form-grid">
+        <input type="hidden" id="oldSn">
+        <div class="form-group">
+          <label>Lokasi Signage</label>
+          <input type="text" id="lokasi" placeholder="cth: Lobby Utama" required>
+        </div>
+        <div class="form-group">
+          <label>Model Perangkat</label>
+          <input type="text" id="model" placeholder="cth: Samsung QBR 55" required>
+        </div>
+        <div class="form-group">
+          <label>Serial Number (SN)</label>
+          <div class="input-with-btn">
+            <input type="text" id="sn" placeholder="cth: SN-98213" required style="flex:1;">
+            <button type="button" onclick="openScannerModal()" class="btn btn-outline" title="Scan QR/Barcode">
+              <i class="fa-solid fa-qrcode"></i>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tanggal Install</label>
+          <input type="date" id="tglInstall" required>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+          <button type="button" onclick="closeFormModal()" class="btn btn-outline">Batal</button>
+          <button type="button" id="btnSubmit" onclick="saveData()" class="btn btn-primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. MODAL QR/BARCODE SCANNER -->
+  <div id="scannerModal" class="modal-overlay" style="display: none;">
+    <div class="modal-card" style="text-align: center;">
+      <h3>Scan QR / Barcode SN</h3>
+      <div id="reader" style="width: 100%; margin-top: 12px;"></div>
+      <button onclick="closeScannerModal()" class="btn btn-outline" style="margin-top: 12px; width: 100%;">Tutup Camera</button>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
   <div class="container" id="appContent" style="display: none;">
     <div class="header">
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -117,43 +178,28 @@
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <span id="roleBadge" class="badge"></span>
-        <button onclick="handleLogout()" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;">
-          <i class="fa-solid fa-power-off"></i>
-        </button>
+        <button onclick="handleLogout()" class="btn btn-outline" style="padding: 4px 8px;" title="Keluar"><i class="fa-solid fa-power-off"></i></button>
       </div>
     </div>
 
-    <!-- Form CRUD (Admin Only) -->
-    <div class="card" id="formCard">
-      <div class="card-title"><i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> Form Signage</div>
-      <form id="crudForm" class="form-grid">
-        <input type="hidden" id="oldSn">
-        <div class="form-group">
-          <label>Lokasi</label>
-          <input type="text" id="lokasi" required>
-        </div>
-        <div class="form-group">
-          <label>Model</label>
-          <input type="text" id="model" required>
-        </div>
-        <div class="form-group">
-          <label>Serial Number (SN)</label>
-          <input type="text" id="sn" required>
-        </div>
-        <div class="form-group">
-          <label>Tanggal Install</label>
-          <input type="date" id="tglInstall" required>
-        </div>
-        <div class="form-actions">
-          <button type="button" id="btnSubmit" class="btn btn-primary" onclick="saveData()">Tambah Data</button>
-          <button type="button" id="btnCancel" class="btn" style="display:none;" onclick="resetForm()">Batal</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Table -->
+    <!-- Toolbar: Search, Add, & Export -->
     <div class="card">
-      <div class="card-title"><i class="fa-solid fa-list" style="color: var(--primary);"></i> Daftar Signage</div>
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
+          <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari lokasi, model, atau SN...">
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="btnAddData" onclick="openFormModal('create')" class="btn btn-primary" style="display: none;">
+            <i class="fa-solid fa-plus"></i> Tambah
+          </button>
+          <button onclick="exportToCSV()" class="btn btn-success">
+            <i class="fa-solid fa-file-csv"></i> Ekspor CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
       <div class="table-container">
         <table>
           <thead>
@@ -176,6 +222,8 @@
   <script>
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyH5ivDioNeyC_rbky2X5ta0pj-8qdH5-8gth4ectYaFCPlgJgg052eBU_bv6QA_-dggA/exec";
     let currentUser = null;
+    let rawDataStore = [];
+    let html5QrCode = null;
 
     window.onload = function() {
       const savedUser = localStorage.getItem('userData');
@@ -203,7 +251,7 @@
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          currentUser = { role: res.role, nama: res.nama };
+          currentUser = { role: res.role, nama: res.nama, pin: res.pin };
           localStorage.setItem('userData', JSON.stringify(currentUser));
           showApp();
         } else {
@@ -234,12 +282,12 @@
       badge.innerText = currentUser.role;
       badge.className = 'badge ' + (currentUser.role === 'admin' ? 'badge-admin' : 'badge-user');
 
-      if (currentUser.role !== 'admin') {
-        document.getElementById('formCard').style.display = 'none';
-        document.getElementById('thAksi').style.display = 'none';
-      } else {
-        document.getElementById('formCard').style.display = 'block';
+      if (currentUser.role === 'admin') {
+        document.getElementById('btnAddData').style.display = 'inline-flex';
         document.getElementById('thAksi').style.display = 'table-cell';
+      } else {
+        document.getElementById('btnAddData').style.display = 'none';
+        document.getElementById('thAksi').style.display = 'none';
       }
 
       loadData();
@@ -248,19 +296,22 @@
     function loadData() {
       fetch(WEB_APP_URL)
         .then(res => res.json())
-        .then(data => renderTable(data));
+        .then(data => {
+          rawDataStore = data || [];
+          renderTable(rawDataStore);
+        });
     }
 
     function renderTable(data) {
       let html = '';
       if (!data || data.length === 0) {
-        html = '<tr><td colspan="5" style="text-align:center;">Belum ada data.</td></tr>';
+        html = '<tr><td colspan="5" style="text-align:center;">Tidak ada data ditemukan.</td></tr>';
       } else {
         data.forEach(row => {
           let tgl = row[3] ? new Date(row[3]).toISOString().split('T')[0] : '-';
           let aksi = currentUser.role === 'admin' ? `
             <td data-label="Aksi" style="text-align: right;">
-              <button onclick="editData('${row[0]}','${row[1]}','${row[2]}','${tgl}')" class="btn btn-outline" style="padding:4px 8px;"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="openFormModal('update', '${row[0]}','${row[1]}','${row[2]}','${tgl}')" class="btn btn-outline" style="padding:4px 8px;"><i class="fa-solid fa-pen"></i></button>
               <button onclick="deleteData('${row[2]}')" class="btn btn-outline" style="padding:4px 8px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
             </td>` : '';
 
@@ -276,8 +327,36 @@
       document.getElementById('tableBody').innerHTML = html;
     }
 
+    /* FITUR PENCARIAN REAL-TIME */
+    function filterTable() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = rawDataStore.filter(row => {
+        return (row[0] && row[0].toLowerCase().includes(q)) ||
+               (row[1] && row[1].toLowerCase().includes(q)) ||
+               (row[2] && row[2].toLowerCase().includes(q));
+      });
+      renderTable(filtered);
+    }
+
+    /* FITUR MODAL FORM */
+    function openFormModal(type, lokasi='', model='', sn='', tgl='') {
+      document.getElementById('formModal').style.display = 'flex';
+      document.getElementById('modalTitle').innerText = type === 'create' ? 'Tambah Data Signage' : 'Edit Data Signage';
+      document.getElementById('oldSn').value = type === 'create' ? '' : sn;
+      document.getElementById('lokasi').value = lokasi;
+      document.getElementById('model').value = model;
+      document.getElementById('sn').value = sn;
+      document.getElementById('tglInstall').value = tgl;
+    }
+
+    function closeFormModal() {
+      document.getElementById('formModal').style.display = 'none';
+    }
+
+    /* FITUR SIMPAN & HAPUS (DENGAN PROTEKSI BACKEND PIN) */
     function saveData() {
       const payload = {
+        pin: currentUser.pin, // Token/PIN Backend Authorization
         action: document.getElementById('oldSn').value ? "update" : "create",
         oldSn: document.getElementById('oldSn').value,
         lokasi: document.getElementById('lokasi').value,
@@ -294,19 +373,11 @@
       .then(res => res.json())
       .then(res => {
         alert(res.message);
-        resetForm();
-        loadData();
+        if (res.success) {
+          closeFormModal();
+          loadData();
+        }
       });
-    }
-
-    function editData(lokasi, model, sn, tgl) {
-      document.getElementById('oldSn').value = sn;
-      document.getElementById('lokasi').value = lokasi;
-      document.getElementById('model').value = model;
-      document.getElementById('sn').value = sn;
-      document.getElementById('tglInstall').value = tgl;
-      document.getElementById('btnSubmit').innerText = 'Perbarui Data';
-      document.getElementById('btnCancel').style.display = 'inline-flex';
     }
 
     function deleteData(sn) {
@@ -314,18 +385,57 @@
         fetch(WEB_APP_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "delete", sn: sn })
+          body: JSON.stringify({ pin: currentUser.pin, action: "delete", sn: sn })
         })
         .then(res => res.json())
         .then(res => { alert(res.message); loadData(); });
       }
     }
 
-    function resetForm() {
-      document.getElementById('oldSn').value = '';
-      document.getElementById('crudForm').reset();
-      document.getElementById('btnSubmit').innerText = 'Tambah Data';
-      document.getElementById('btnCancel').style.display = 'none';
+    /* FITUR EKSPOR CSV */
+    function exportToCSV() {
+      if (rawDataStore.length === 0) return alert("Belum ada data untuk diekspor!");
+      let csv = "Lokasi,Model,Serial Number,Tanggal Install\n";
+      rawDataStore.forEach(row => {
+        let tgl = row[3] ? new Date(row[3]).toISOString().split('T')[0] : '';
+        csv += `"${row[0] || ''}","${row[1] || ''}","${row[2] || ''}","${tgl}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Data_Signage_LayarKita_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    /* FITUR SCANNER QR/BARCODE */
+    function openScannerModal() {
+      document.getElementById('scannerModal').style.display = 'flex';
+      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          document.getElementById('sn').value = decodedText;
+          closeScannerModal();
+        },
+        () => {}
+      ).catch(err => alert("Gagal membuka kamera: " + err));
+    }
+
+    function closeScannerModal() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          document.getElementById('scannerModal').style.display = 'none';
+        }).catch(() => {
+          document.getElementById('scannerModal').style.display = 'none';
+        });
+      } else {
+        document.getElementById('scannerModal').style.display = 'none';
+      }
     }
   </script>
 </body>
