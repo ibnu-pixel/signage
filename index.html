@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data Signage - LayarKita Pro</title>
+  <title>Data Signage - LayarKita</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -11,7 +11,6 @@
   <style>
     :root {
       --primary: #2563eb;
-      --primary-hover: #1d4ed8;
       --bg-color: #f8fafc;
       --card-bg: #ffffff;
       --text-main: #0f172a;
@@ -26,7 +25,6 @@
     body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); padding: 16px; }
     .container { max-width: 960px; margin: 0 auto; }
 
-    /* Modals Overlay */
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -40,7 +38,6 @@
 
     .pin-input { letter-spacing: 0.5em; text-align: center; font-size: 1.25rem; font-weight: 700; }
 
-    /* Layout Components */
     .header {
       display: flex; align-items: center; justify-content: space-between;
       background: var(--card-bg); padding: 16px 20px; border-radius: var(--radius);
@@ -69,7 +66,6 @@
     .badge-admin { background: #dbeafe; color: #1e40af; }
     .badge-user { background: #f1f5f9; color: #475569; }
 
-    /* Table */
     .table-container { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th { background: #f8fafc; padding: 12px; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
@@ -88,7 +84,7 @@
 </head>
 <body>
 
-  <!-- MODAL LOGIN -->
+  <!-- LOGIN MODAL -->
   <div id="loginOverlay" class="modal-overlay">
     <div class="modal-card" style="max-width: 360px; text-align: center;">
       <img src="https://lh3.googleusercontent.com/d/1g9T-EcYTnGQd1yXK-oOToE72l1jZ4EKb" class="logo" style="height:50px; margin-bottom: 12px;">
@@ -107,7 +103,7 @@
     </div>
   </div>
 
-  <!-- MODAL FORM DATA -->
+  <!-- FORM MODAL -->
   <div id="formModal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -147,7 +143,7 @@
     </div>
   </div>
 
-  <!-- MODAL QR/BARCODE SCANNER -->
+  <!-- QR SCANNER MODAL -->
   <div id="scannerModal" class="modal-overlay" style="display: none;">
     <div class="modal-card" style="text-align: center;">
       <h3>Scan QR / Barcode SN</h3>
@@ -292,38 +288,40 @@
         });
     }
 
-    // Helper untuk memformat tanggal secara aman tanpa time-zone shift
-    function formatDateString(val) {
-      if (!val) return '-';
-      if (typeof val === 'string' && val.includes('T')) {
-        return val.split('T')[0];
-      }
-      return val.toString().substring(0, 10);
-    }
-
     function renderTable(data) {
       let html = '';
       if (!data || data.length === 0) {
         html = '<tr><td colspan="5" style="text-align:center;">Tidak ada data ditemukan.</td></tr>';
       } else {
-        data.forEach(row => {
-          let tgl = formatDateString(row[3]);
+        data.forEach((row, idx) => {
+          let lokasi = row[0] || '';
+          let model = row[1] || '';
+          let sn = row[2] || '';
+          let tgl = row[3] || '';
+
           let aksi = currentUser.role === 'admin' ? `
             <td data-label="Aksi" style="text-align: right;">
-              <button onclick="openFormModal('update', '${escapeQuotes(row[0])}','${escapeQuotes(row[1])}','${escapeQuotes(row[2])}','${tgl}')" class="btn btn-outline" style="padding:4px 8px;"><i class="fa-solid fa-pen"></i></button>
-              <button onclick="deleteData('${escapeQuotes(row[2])}')" class="btn btn-outline" style="padding:4px 8px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+              <button onclick="triggerEdit(${idx})" class="btn btn-outline" style="padding:4px 8px;"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteData('${escapeQuotes(sn)}')" class="btn btn-outline" style="padding:4px 8px; color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
             </td>` : '';
 
           html += `<tr>
-            <td data-label="Lokasi">${row[0] || '-'}</td>
-            <td data-label="Model">${row[1] || '-'}</td>
-            <td data-label="SN"><strong>${row[2] || '-'}</strong></td>
+            <td data-label="Lokasi">${lokasi}</td>
+            <td data-label="Model">${model}</td>
+            <td data-label="SN"><strong>${sn}</strong></td>
             <td data-label="Tgl Install">${tgl}</td>
             ${aksi}
           </tr>`;
         });
       }
       document.getElementById('tableBody').innerHTML = html;
+    }
+
+    function triggerEdit(idx) {
+      const row = rawDataStore[idx];
+      if (row) {
+        openFormModal('update', row[0], row[1], row[2], row[3]);
+      }
     }
 
     function escapeQuotes(str) {
@@ -414,8 +412,7 @@
       if (rawDataStore.length === 0) return alert("Belum ada data untuk diekspor!");
       let csv = "Lokasi,Model,Serial Number,Tanggal Install\n";
       rawDataStore.forEach(row => {
-        let tgl = formatDateString(row[3]);
-        csv += `"${row[0] || ''}","${row[1] || ''}","${row[2] || ''}","${tgl}"\n`;
+        csv += `"${row[0] || ''}","${row[1] || ''}","${row[2] || ''}","${row[3] || ''}"\n`;
       });
 
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
